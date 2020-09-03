@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>vdom</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <button>Diff</button>
+    <script>
+      const vnode = {
+        tag: 'div',
+        props: { id: 'main' },
+        children: [
+          {
+            tag: 'h2',
+            children: [
+              '国庆放假安排',
+              {
+                tag: 'span',
+                props: { style: { color: 'red' } },
+                children: ['hot'],
+              },
+            ],
+          },
+          {
+            tag: 'p',
+            props: { className: 'article' },
+            children: [
+              '根据国务院办公厅通知精神，现将2020年国庆节、中秋节放假安排通知如下：10月1日（星期四）至8日（星期四）放假调休，共8天。9月27日（星期日）、10月10日（星期六）上班。',
+            ],
+          },
+        ],
+      }
+
+      const newVnode = {
+        tag: 'div',
+        props: { id: 'main' },
+        children: [
+          {
+            tag: 'h2',
+            children: ['收购TikTok谈判陷入僵局'],
+          },
+          {
+            tag: 'p',
+            props: { className: 'article' },
+            children: [
+              '当外界认为TikTok的收购谈判已进入尾声时，我国调整发布《禁止出口限制出口技术目录》，其中限制出口部分的“基于数据分析的个性化信息推送服务技术”条款，被媒体解读为直接针对TikTok算法技术。',
+              {
+                tag: 'span',
+                props: { style: { color: 'red' } },
+                children: ['【版权所有，禁止转载】'],
+              },
+            ],
+          },
+        ],
+      }
+
+      var btn = document.querySelector('button')
+      btn.addEventListener('click', (event) => diff(vnode, newVnode))
+
+      // 创建节点
+      function createNode(vnode) {
+        if (typeof vnode === 'string') return document.createTextNode(vnode)
+        const { tag, props, children } = vnode
+        const el = document.createElement(tag)
+        for (const k in props) {
+          const v = props[k]
+          if (k === 'style')
+            Object.keys(v).forEach((key) => (el.style[key] = v[key]))
+          else el.setAttribute(k, v)
+        }
+        children.forEach((child) => el.appendChild(createNode(child)))
+        return (vnode.el = el)
+      }
+      const el = createNode(vnode)
+      app.appendChild(el)
+
+      // 根据对比新老虚拟节点来更新真实dom结构
+      function diff(v1, v2) {
+        if (v1.tag !== v2.tag) return createNode(v2)
+        const el = (v2.el = v1.el)
+        patchProps(v1.props, v2.props, el)
+        patchChildren(v1.children, v2.children, el)
+      }
+
+      function patchProps(p1, p2, el) {
+        for (let k1 in p1) el.removeAttribute(k1)
+        for (let k2 in p2) {
+          const v2 = p2[k2]
+          if (k2 === 'style')
+            Object.keys(v2).forEach((k) => (el.style[k] = v2[k]))
+          else el.setAttribute(k2, v2)
+        }
+      }
+      function patchChildren(c1, c2, el) {
+        let i = 0,
+          node,
+          len = Math.max(c1.length, c2.length),
+          childNodes = Array.from(el.childNodes)
+
+        while (i < len) {
+          const v1 = c1[i],
+            v2 = c2[i],
+            node = v1 && childNodes[i]
+          if (v1 && !v2) el.removeChild(node)
+          else if (!v1 && v2) el.insertBefore(createNode(v2), node)
+          else if (v1 && v2) {
+            const t1 = typeof v1,
+              t2 = typeof v2
+            if (t1 !== t2) el.replaceChild(createNode(v2), node)
+            else if (t1 === 'string') node.textContent = v2
+            else diff(v1, v2)
+          }
+          i++
+        }
+      }
+    </script>
+  </body>
+</html>
